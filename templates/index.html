@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text to Speech App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+        }
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+            width: 400px; /* Adjust width as needed */
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        input[type="file"] {
+            margin-bottom: 20px;
+        }
+        select {
+            padding: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        /* Flexbox for buttons */
+        .button-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        button {
+            flex: 1; /* Equal width for each button */
+            padding: 10px 0;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        audio {
+            margin-top: 20px;
+            width: 100%;
+        }
+        /* Spinner styles */
+        .spinner {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(0, 0, 0, 0.1);
+            border-top: 5px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Text to Speech App</h1>
+        <form id="tts-form" method="POST" enctype="multipart/form-data">
+            <textarea name="text" placeholder="Enter or paste text here..."></textarea>
+            <input type="file" name="file" accept=".txt,.pdf,.docx,.md,.epub">
+            <select name="voice">
+                <option value="female">Female Voice</option>
+                <option value="male">Male Voice</option>
+            </select>
+
+            <!-- Flexbox row for buttons -->
+            <div class="button-row">
+                <button type="submit">Read</button>
+                <button type="button" id="new-btn">New</button>
+                <button type="button" id="cancel-btn">Cancel</button>
+                <button type="button" id="clear-btn">Clear</button>
+            </div>
+        </form>
+
+        <!-- Loading Spinner -->
+        <div class="spinner" id="loading-spinner"></div>
+
+        <audio id="audio-player" controls style="display:none;">
+            <source id="audio-source" type="audio/mp3">
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+
+    <script>
+        let ajaxRequest;
+
+        $(document).ready(function () {
+            $('#tts-form').on('submit', function (e) {
+                e.preventDefault();
+
+                // Show spinner
+                $('#loading-spinner').show();
+
+                // Submit form using AJAX
+                var formData = new FormData(this);
+
+                ajaxRequest = $.ajax({
+                    url: '/process',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        // Hide spinner
+                        $('#loading-spinner').hide();
+
+                        if (data.audio_file) {
+                            var audioUrl = '/audio/' + data.audio_file;
+                            $('#audio-source').attr('src', audioUrl);
+                            $('#audio-player').show()[0].load();  // Reload audio player with new file
+                        } else if (data.error) {
+                            alert(data.error);
+                        }
+                    },
+                    error: function () {
+                        // Hide spinner in case of an error
+                        $('#loading-spinner').hide();
+                        alert('An error occurred. Please try again.');
+                    }
+                });
+            });
+
+            // Clear button functionality
+            $('#clear-btn').on('click', function () {
+                $('textarea[name="text"]').val('');
+                $('input[type="file"]').val('');
+                $('#audio-player').hide();  // Hide the audio player
+            });
+
+            // Cancel button functionality
+            $('#cancel-btn').on('click', function () {
+                if (ajaxRequest) {
+                    ajaxRequest.abort(); // Abort the AJAX request if it's in progress
+                }
+                $('#loading-spinner').hide();  // Hide the spinner
+            });
+
+            // New button functionality
+            $('#new-btn').on('click', function () {
+                $('#tts-form')[0].reset();  // Reset the form
+                $('#audio-player').hide();  // Hide the audio player
+                $('#loading-spinner').hide();  // Hide the spinner
+            });
+        });
+    </script>
+</body>
+</html>
